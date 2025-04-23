@@ -1,35 +1,3 @@
-// // src/index.js
-// const { connectRabbitMQ, getChannel } = require("./config/rabbitmq");
-// const { publishEvent } = require("../events/eventPublisher");
-// const { subscribeToEvent } = require("../events/eventSubscriber");
-// const EventEmitter = require("events");
-
-// const eventEmitter = new EventEmitter();
-
-// module.exports = {
-//   connectRabbitMQ,
-//   getChannel, // 👈 optional, useful if needed outside
-//   publishEvent,
-//   subscribeToEvent,
-//   eventEmitter,
-// };
-
-// message-bus/src/index.js
-// const { connectRabbitMQ } = require("./config/rabbitmq");
-// const { publishEvent } = require("../events/eventPublisher");
-// const { subscribeToEvent } = require("../events/eventSubscriber");
-// const EventEmitter = require("events");
-
-// const eventEmitter = new EventEmitter();
-
-// module.exports = {
-//   connectRabbitMQ,
-//   publishEvent,
-//   subscribeToEvent,
-//   eventEmitter,
-// };
-
-// src/index.js
 const EventEmitter = require("events");
 const amqp = require("amqplib");
 
@@ -65,28 +33,49 @@ async function connectRabbitMQ(config) {
 }
 
 /**
- * Publish event using RabbitMQ
+ * Publish event to a fanout exchange
  */
-function publishEvent(eventName, payload) {
+async function publishEvent(eventName, payload) {
   if (!eventEmitter.channel) {
     console.error("❌ Cannot publish event: RabbitMQ channel is not initialized.");
     return;
   }
 
   try {
-    eventEmitter.channel.assertQueue(eventName, { durable: false });
-    eventEmitter.channel.sendToQueue(eventName, Buffer.from(JSON.stringify(payload)));
-    console.log(`📤 Published event: ${eventName}`);
+    // Declare fanout exchange and publish message
+    await eventEmitter.channel.assertExchange(eventName, "fanout", { durable: false });
+    eventEmitter.channel.publish(eventName, "", Buffer.from(JSON.stringify(payload)));
+
+    console.log(`📤 Published event to exchange '${eventName}':`, payload);
   } catch (err) {
     console.error("❌ Failed to publish event:", err);
   }
 }
 
 /**
- * Subscribe to custom EventEmitter (not RabbitMQ queues)
+ * Subscribe to a fanout exchange
  */
-function subscribeToEvent(eventName, handler) {
-  eventEmitter.on(eventName, handler);
+async function subscribeToEvent(exchange, handler) {
+  if (!eventEmitter.channel) {
+    throw new Error("RabbitMQ channel not initialized");
+  }
+
+  await eventEmitter.channel.assertExchange(exchange, "fanout", { durable: false });
+  const q = await eventEmitter.channel.assertQueue("", { exclusive: true });
+  await eventEmitter.channel.bindQueue(q.queue, exchange, "");
+
+  eventEmitter.channel.consume(
+    q.queue,
+    (msg) => {
+      if (msg.content) {
+        const eventData = JSON.parse(msg.content.toString());
+        handler(eventData);
+      }
+    },
+    { noAck: true }
+  );
+
+  console.log(`[message-bus] Subscribed to fanout exchange: ${exchange}`);
 }
 
 module.exports = {
