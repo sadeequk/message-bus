@@ -1,11 +1,21 @@
-const { getChannel } = require("../config/rabbitmq");
+function publishEvent(eventName, payload) {
+  if (!module.exports.eventEmitter?.channel) {
+    console.error("❌ Channel not initialized");
+    return;
+  }
 
-async function publishEvent(exchange, event) {
-  const channel = getChannel();
-  await channel.assertExchange(exchange, "fanout", { durable: false });
+  module.exports.eventEmitter.channel.publish(
+    "", // default exchange
+    eventName,
+    Buffer.from(JSON.stringify(payload))
+  );
 
-  channel.publish(exchange, "", Buffer.from(JSON.stringify(event)));
-  console.log(`[message-bus] Published ${event.type}`);
+  console.log(`📤 Event published: ${eventName}`);
 }
 
-module.exports = { publishEvent };
+module.exports = {
+  publishEvent,
+  setEventEmitter: (emitter) => {
+    module.exports.eventEmitter = emitter;
+  },
+};
