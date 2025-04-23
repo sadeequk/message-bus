@@ -30,42 +30,61 @@
 // };
 
 // src/index.js
-
 const EventEmitter = require("events");
 const amqp = require("amqplib");
 
 const eventEmitter = new EventEmitter();
 
+/**
+ * Connect to RabbitMQ with retries
+ */
 async function connectRabbitMQ(config) {
-  try {
-    const connection = await amqp.connect(config.amqpUrl);
-    const channel = await connection.createChannel();
+  const { amqpUrl = "amqp://localhost", retryAttempts = 10, retryDelay = 5000 } = config;
 
-    eventEmitter.channel = channel;
-    console.log("✅ Connected to RabbitMQ");
+  let attempts = 0;
 
-    return eventEmitter;
-  } catch (error) {
-    console.error("❌ RabbitMQ connection error:", error);
-    throw error;
+  while (attempts < retryAttempts) {
+    try {
+      const connection = await amqp.connect(amqpUrl);
+      const channel = await connection.createChannel();
+      eventEmitter.channel = channel;
+
+      console.log("✅ Connected to RabbitMQ");
+      return eventEmitter;
+    } catch (error) {
+      attempts++;
+      console.error(`❌ RabbitMQ connection failed (Attempt ${attempts}/${retryAttempts}):`, error.message);
+
+      if (attempts >= retryAttempts) {
+        throw new Error("❌ Exceeded maximum retry attempts to connect to RabbitMQ");
+      }
+
+      await new Promise((res) => setTimeout(res, retryDelay));
+    }
   }
 }
 
+/**
+ * Publish event using RabbitMQ
+ */
 function publishEvent(eventName, payload) {
   if (!eventEmitter.channel) {
-    console.error("❌ Channel not initialized");
+    console.error("❌ Cannot publish event: RabbitMQ channel is not initialized.");
     return;
   }
 
-  eventEmitter.channel.publish(
-    "", // default exchange
-    Buffer.from(eventName),
-    Buffer.from(JSON.stringify(payload))
-  );
-
-  console.log(`📤 Published event: ${eventName}`);
+  try {
+    eventEmitter.channel.assertQueue(eventName, { durable: false });
+    eventEmitter.channel.sendToQueue(eventName, Buffer.from(JSON.stringify(payload)));
+    console.log(`📤 Published event: ${eventName}`);
+  } catch (err) {
+    console.error("❌ Failed to publish event:", err);
+  }
 }
 
+/**
+ * Subscribe to custom EventEmitter (not RabbitMQ queues)
+ */
 function subscribeToEvent(eventName, handler) {
   eventEmitter.on(eventName, handler);
 }
