@@ -1,5 +1,5 @@
 {
-  "name": "sadeequk/message-bus",
+  "name": "message-bus",
   "version": "1.0.0",
   "description": "Reusable RabbitMQ message bus for microservices",
   "main": "src/index.js",
