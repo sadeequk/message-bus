@@ -1,0 +1,23 @@
+{
+  "name": "sadeequk/message-bus",
+  "version": "1.0.0",
+  "description": "Reusable RabbitMQ message bus for microservices",
+  "main": "src/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sadeequk/message-bus.git"
+  },
+  "keywords": [
+    "rabbitmq",
+    "microservices",
+    "event",
+    "publisher",
+    "subscriber"
+  ],
+  "author": "Sadeeq Ullah",
+  "license": "MIT",
+  "dependencies": {
+    "amqplib": "^0.10.7",
+    "dotenv": "^16.5.0"
+  }
+}
