@@ -1,4 +1,4 @@
-const { getChannel } = require("../config/rabbitmq");
+const { getChannel } = require("../src/config/rabbitmq");
 
 async function subscribeToEvent(exchange, onMessage) {
   const channel = getChannel();
