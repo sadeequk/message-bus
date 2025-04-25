@@ -2,7 +2,7 @@ module.exports = {
   "user.microsoftAuthenticated": {
     type: "exchange",
     name: "user.events", //  "channel"
-    subscribers: ["Audit-Service", "Profile-Service"],
+    subscribers: ["Audit-Service"],
   },
   "user.created": {
     type: "queue",
