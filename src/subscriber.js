@@ -1,9 +1,7 @@
-// message-bus/src/subscriber.js
-
 const { getChannel } = require("./config/rabbitmq");
 const config = require("../event.config");
 
-async function subscribeToEvent(eventName, handler) {
+async function subscribeToEvent(eventName, handler, subscriberId = "default-subscriber") {
   const eventConfig = config[eventName];
 
   if (!eventConfig) {
@@ -17,10 +15,14 @@ async function subscribeToEvent(eventName, handler) {
   try {
     if (type === "exchange") {
       await channel.assertExchange(name, "fanout", { durable: false });
-      const { queue } = await channel.assertQueue("", { exclusive: true });
-      await channel.bindQueue(queue, name, "");
+
+      // ✅ Persistent queue named per service
+      const queueName = `${eventName}.${subscriberId}`;
+      await channel.assertQueue(queueName, { durable: true });
+      await channel.bindQueue(queueName, name, "");
+
       channel.consume(
-        queue,
+        queueName,
         (msg) => {
           if (msg?.content) {
             handler(JSON.parse(msg.content.toString()));
@@ -29,9 +31,10 @@ async function subscribeToEvent(eventName, handler) {
         { noAck: true }
       );
 
-      console.log(`✅ Subscribed to exchange '${name}' for event '${eventName}'`);
+      console.log(`✅ Subscribed '${subscriberId}' to exchange '${name}' for event '${eventName}'`);
     } else if (type === "queue") {
       await channel.assertQueue(name, { durable: false });
+
       channel.consume(
         name,
         (msg) => {
