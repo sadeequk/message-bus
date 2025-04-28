@@ -1,5 +1,3 @@
-// message-bus/src/publisher.js
-
 const { getChannel } = require("./config/rabbitmq");
 const config = require("../event.config");
 
