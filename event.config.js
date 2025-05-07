@@ -9,9 +9,19 @@ module.exports = {
     name: "user.created.queue", // 1:1 "channel"
     subscribers: ["Email-Service"],
   },
-  "invoice.created": {
+  "lookuptype.created": {
     type: "exchange",
-    name: "invoice.events",
-    subscribers: ["Accounting-Service"],
+    name: "lookuptype.events",
+    subscribers: ["Audit-Service"],
+  },
+  "lookuptype.updated": {
+    type: "exchange",
+    name: "lookuptype.events",
+    subscribers: ["Audit-Service"],
+  },
+  "lookuptype.deleted": {
+    type: "exchange",
+    name: "lookuptype.events",
+    subscribers: ["Audit-Service"],
   },
 };
