@@ -4,11 +4,6 @@ module.exports = {
     name: "user.events", //  "channel"
     subscribers: ["Audit-Service"],
   },
-  "user.created": {
-    type: "queue",
-    name: "user.created.queue", // 1:1 "channel"
-    subscribers: ["Email-Service"],
-  },
   "lookuptype.created": {
     type: "exchange",
     name: "lookuptype.events",
