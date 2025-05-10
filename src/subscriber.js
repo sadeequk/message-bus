@@ -70,16 +70,13 @@ async function subscribeToEvent(eventName, handler, subscriberId = "default-subs
 
   try {
     if (type === "exchange") {
-      // Use non-durable exchange to match publisher
+      // Keep exchange as non-durable to match existing configuration
       await channel.assertExchange(name, "fanout", { durable: false });
 
-      // Create a durable queue with message persistence
+      // Create a durable queue without TTL to match existing configuration
       const queueName = `${eventName}.${subscriberId}`;
       await channel.assertQueue(queueName, {
         durable: true,
-        arguments: {
-          "x-message-ttl": 2592000000, // 30 days in milliseconds
-        },
       });
       await channel.bindQueue(queueName, name, "");
 
