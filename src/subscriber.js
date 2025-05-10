@@ -1,4 +1,4 @@
-// const { getChannel } = require("./config/rabbitmq");
+// / const { getChannel } = require("./config/rabbitmq");
 // const config = require("../event.config");
 
 // async function subscribeToEvent(eventName, handler, subscriberId = "default-subscriber") {
@@ -70,17 +70,20 @@ async function subscribeToEvent(eventName, handler, subscriberId = "default-subs
 
   try {
     if (type === "exchange") {
-      await channel.assertExchange(name, "fanout", { durable: true });
+      // Use non-durable exchange to match publisher
+      await channel.assertExchange(name, "fanout", { durable: false });
 
+      // Create a durable queue with message persistence
       const queueName = `${eventName}.${subscriberId}`;
       await channel.assertQueue(queueName, {
         durable: true,
         arguments: {
-          "x-message-ttl": 2592000000,
+          "x-message-ttl": 2592000000, // 30 days in milliseconds
         },
       });
       await channel.bindQueue(queueName, name, "");
 
+      // Set prefetch to 1 to ensure fair distribution
       await channel.prefetch(1);
 
       channel.consume(
@@ -90,14 +93,16 @@ async function subscribeToEvent(eventName, handler, subscriberId = "default-subs
             try {
               const data = JSON.parse(msg.content.toString());
               await handler(data);
+              // Acknowledge message only after successful processing
               channel.ack(msg);
             } catch (error) {
               console.error(`❌ Error processing message for ${eventName}:`, error);
+              // Reject message and requeue if processing fails
               channel.nack(msg, false, true);
             }
           }
         },
-        { noAck: false }
+        { noAck: false } // Set to false to enable manual acknowledgment
       );
 
       console.log(`✅ Subscribed '${subscriberId}' to exchange '${name}' for event '${eventName}'`);
